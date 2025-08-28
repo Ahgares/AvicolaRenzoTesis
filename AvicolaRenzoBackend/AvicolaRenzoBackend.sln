@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvicolaRenzoPredictor", "AvicolaRenzoPredictor.csproj", "{D5A1D5E8-AFF1-56A2-B1ED-234819A6F2C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D5A1D5E8-AFF1-56A2-B1ED-234819A6F2C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5A1D5E8-AFF1-56A2-B1ED-234819A6F2C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5A1D5E8-AFF1-56A2-B1ED-234819A6F2C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5A1D5E8-AFF1-56A2-B1ED-234819A6F2C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4FF26D91-96D3-4DBF-9804-C2E8717BA93B}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,106 @@
+﻿@model AvicolaRenzoPredictor.Models.InventarioFiltroVM
+@{
+    ViewData["Title"] = "Inventario";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    body { background-color: #f8f9fa; }
+    .main-header { background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-top: 20px; }
+    .btn-agregar { margin-top: 20px; margin-left: 20px; }
+    th, td { vertical-align: middle; }
+    .table thead th { white-space: nowrap; }
+    .d-flex.gap-2 > a { white-space: nowrap; }
+    .container { max-width: 1100px; }
+    .table { margin-bottom: 0; }
+</style>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="text-white bg-danger p-3 rounded m-0">Inventario Avícola Renzo's</h1>
+        <div class="d-flex gap-2">
+            <a href="/Inventario/Agregar" class="btn btn-danger">Agregar Datos</a>
+            <a href="/Inventario/Importar" class="btn btn-outline-danger">Importar CSV</a>
+            <a href="/Prediccion/Resultados" class="btn btn-outline-dark">Generar análisis</a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Desde</label>
+                    <input name="Desde" type="date" value="@Model.Desde?.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Hasta</label>
+                    <input name="Hasta" type="date" value="@Model.Hasta?.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Precio mín</label>
+                    <input name="PrecioMin" type="number" step="0.01" value="@Model.PrecioMin" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Precio máx</label>
+                    <input name="PrecioMax" type="number" step="0.01" value="@Model.PrecioMax" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Observación contiene</label>
+                    <input name="Observacion" type="text" value="@Model.Observacion" class="form-control" />
+                </div>
+                <input type="hidden" name="Page" value="1" />
+                <input type="hidden" name="PageSize" value="@Model.PageSize" />
+                <div class="col-md-1 d-grid">
+                    <button type="submit" class="btn btn-outline-dark">Filtrar</button>
+                </div>
+                <div class="col-md-1 d-grid">
+                    <a href="/Inventario" class="btn btn-outline-secondary">Limpiar</a>
+                </div>
+            </form>
+            <div class="mt-2">
+                <a class="btn btn-sm btn-outline-primary" href="@Url.Action("ExportCsv", "Inventario", new { Desde = Model.Desde?.ToString("yyyy-MM-dd"), Hasta = Model.Hasta?.ToString("yyyy-MM-dd"), PrecioMin = Model.PrecioMin, PrecioMax = Model.PrecioMax, Observacion = Model.Observacion })">Exportar CSV</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped mt-4 text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Inventario Prom.</th>
+                    <th>Precio (S/.)</th>
+                    <th>Ventas (kg)</th>
+                    <th>Pérdidas (kg)</th>
+                    <th>Observación</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var i in Model.Resultados)
+            {
+                <tr>
+                    <td>@i.Fecha.ToShortDateString()</td>
+                    <td>@i.InventarioPromedio</td>
+                    <td>@i.PrecioKg</td>
+                    <td>@i.VentasKg</td>
+                    <td>@i.PerdidasKg</td>
+                    <td class="text-break">@i.Observacion</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Paginación" class="mt-3">
+        <ul class="pagination justify-content-center">
+            @{ var prev = Math.Max(1, Model.Page - 1); var next = Math.Min(Model.TotalPages, Model.Page + 1); }
+            <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new { Page = prev, PageSize = Model.PageSize, Desde = Model.Desde?.ToString("yyyy-MM-dd"), Hasta = Model.Hasta?.ToString("yyyy-MM-dd"), PrecioMin = Model.PrecioMin, PrecioMax = Model.PrecioMax, Observacion = Model.Observacion })">Anterior</a>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Página @Model.Page de @Model.TotalPages (@Model.Total registros)</span></li>
+            <li class="page-item @(Model.Page == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new { Page = next, PageSize = Model.PageSize, Desde = Model.Desde?.ToString("yyyy-MM-dd"), Hasta = Model.Hasta?.ToString("yyyy-MM-dd"), PrecioMin = Model.PrecioMin, PrecioMax = Model.PrecioMax, Observacion = Model.Observacion })">Siguiente</a>
+            </li>
+        </ul>
+    </nav>
+</div>

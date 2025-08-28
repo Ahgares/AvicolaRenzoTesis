@@ -1,0 +1,49 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs / caches
+*.log
+/.vs/
+*.nupkg
+*.snupkg
+
+# Publish artifacts
+artifacts/
+publish/
+
+# ASP.NET scaffolding
+ScaffoldingReadMe.txt
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# Data / local DB
+*.db
+*.sqlite
+*.sqlite3
+AvicolaRenzo.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env / secrets (set via env vars, never commit)
+.env
+secrets.json

@@ -1,0 +1,11 @@
+Fecha,InventarioPromedio,PrecioKg,VentasKg,PerdidasKg,Observacion
+2025-07-01,400,9.80,360,5,Dia normal
+2025-07-02,420,9.75,372,4,Promocion local
+2025-07-03,380,9.90,345,3,Clima frio
+2025-07-04,410,9.85,368,6,Demanda estable
+2025-07-05,395,9.95,350,4,Fin de semana
+2025-07-06,405,9.88,358,5,Demanda estable
+2025-07-07,390,10.00,340,4,Precio mas alto
+2025-07-08,415,9.92,370,5,Demanda alta
+2025-07-09,385,9.97,348,3,Dia normal
+2025-07-10,425,9.89,382,6,Evento local

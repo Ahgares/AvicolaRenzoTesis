@@ -1,0 +1,282 @@
+﻿@model AvicolaRenzoPredictor.Models.PrediccionResultadosVM
+@{
+    ViewData["Title"] = "Resultados de Predicción";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+@using System.Text.Json
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+    .header-bar { background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 30px; }
+    .comentario { background-color: #fff3cd; padding: 15px; border-left: 5px solid #ffc107; border-radius: 5px; margin-bottom: 20px; }
+    .scroll-panel { max-height: 420px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: .25rem; background: #ffffff; }
+    .table thead th { position: sticky; top: 0; }
+    .card-title { margin-bottom: .75rem; }
+    .form-label { font-weight: 500; }
+    .chart-wrap canvas { width: 100%; height: 420px; }
+    .resizable { resize: both; overflow: auto; min-width: 260px; min-height: 260px; border: 1px dashed #ced4da; border-radius: 6px; padding: 6px; }
+    code { color: #d63384; }
+    .small-muted { font-size: .875rem; color: #6c757d; }
+    .w-100p { width: 100%; }
+</style>
+
+<div class="container mt-4">
+    <div class="header-bar">
+        <h2>Resultados de la Predicción de Inventario</h2>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" action="/Prediccion/Resultados" class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Desde</label>
+                    <input name="Desde" type="date" value="@Model.Filtro.Desde?.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Hasta</label>
+                    <input name="Hasta" type="date" value="@Model.Filtro.Hasta?.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Mes</label>
+                    <select name="Mes" class="form-select">
+                        <option value="">Todos</option>
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m" @(Model.Filtro.Mes == m ? "selected" : null)>@System.Globalization.CultureInfo.GetCultureInfo("es-PE").DateTimeFormat.GetMonthName(m)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Gráfico</label>
+                    <select name="ChartMode" class="form-select">
+                        <option value="compare" @(Model.Filtro.ChartMode=="compare"?"selected":null)>Predicción vs Inventario</option>
+                        <option value="single" @(Model.Filtro.ChartMode=="single"?"selected":null)>Sólo Predicción</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Servicio (%)</label>
+                    <input name="ServiceLevel" type="number" step="0.001" min="0.5" max="0.999" value="@Model.Filtro.ServiceLevel" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Lead time (días)</label>
+                    <input name="LeadTimeDays" type="number" min="1" max="60" value="@Model.Filtro.LeadTimeDays" class="form-control" />
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-outline-dark">Aplicar filtros</button>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <a href="/Prediccion/Resultados?Desde=@DateTime.Today.AddYears(-3).ToString("yyyy-MM-dd")&Hasta=@DateTime.Today.ToString("yyyy-MM-dd")" class="btn btn-outline-secondary">Últimos 3 años</a>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <a href="/Prediccion/Resultados" class="btn btn-outline-secondary">Limpiar</a>
+                </div>
+            </form>
+            <div class="mt-2">
+                <a class="btn btn-sm btn-outline-primary" href="@Url.Action("ExportCsvPrediccion", "Prediccion", new { Desde = Model.Filtro.Desde?.ToString("yyyy-MM-dd"), Hasta = Model.Filtro.Hasta?.ToString("yyyy-MM-dd"), Mes = Model.Filtro.Mes, ChartMode = Model.Filtro.ChartMode })">Exportar Predicciones CSV</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="alert alert-info mb-0">
+                <div><strong>Filas usadas:</strong> @Model.TotalFilas</div>
+                <div><strong>Promedio Inventario:</strong> @Model.PromedioInventario</div>
+                <div><strong>Promedio Precio:</strong> @Model.PromedioPrecio</div>
+                <div><strong>Promedio Ventas Pred.:</strong> @Model.PromedioVentasPred</div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="comentario mb-0">
+                <strong>Recomendaciones</strong>
+                <ul class="mb-0">
+                    <li>Últimos 3 meses: @Model.Ultimos3MesesVentas.ToString("N2") kg vendidos; pérdidas promedio @Model.PerdidaPromUlt3Meses.ToString("N2") kg/día.</li>
+                    <li>@Model.MesObjetivoNombre @Model.AnioAnteriorReferencia: @Model.VentasMismoMesAnioAnterior.ToString("N2") kg vendidos.</li>
+                    <li>@(Model.Filtro.Mes != null ? $"Predicción actual para {Model.MesObjetivoNombre}: promedio {Model.PromedioVentasPred:N2} kg por registro; total estimado en conjunto {Model.Resultados.Sum(r=>r.ventas_pred):N2} kg." : $"Predicción promedio actual: {Model.PromedioVentasPred:N2} kg por registro; total en conjunto {Model.Resultados.Sum(r=>r.ventas_pred):N2} kg.")</li>
+                    @if (Model.SugerenciaAbastecerKg > 0)
+                    {
+                        <li>Recomendación: abastecer al menos @Model.SugerenciaAbastecerKg.ToString("N0") kg para cubrir demanda (+10% colchón y pérdidas). Considera programar compras escalonadas.</li>
+                    }
+                    else if (Model.ExcesoEsperadoKg > 0)
+                    {
+                        <li>Recomendación: se estima un excedente de @Model.ExcesoEsperadoKg.ToString("N0") kg; prioriza rotación, evalúa promociones o reduce compras esta ventana.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.SugerenciaAbastecerKg > 0)
+    {
+        <div class="alert alert-success mt-3">
+            <strong>Sugerencia de Abastecimiento:</strong>
+            Abastecer aproximadamente <strong>@Model.SugerenciaAbastecerKg.ToString("N0") kg</strong> (incluye 10% de colchón y pérdidas promedio recientes @Model.PerdidaPromUlt3Meses.ToString("N2") kg/día).
+        </div>
+    }
+    else if (Model.ExcesoEsperadoKg > 0)
+    {
+        <div class="alert alert-warning mt-3">
+            <strong>Posible Excedente:</strong>
+            Exceso estimado de <strong>@Model.ExcesoEsperadoKg.ToString("N0") kg</strong>. Prioriza rotación, considera promociones o reducir compras.
+        </div>
+    }
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h5 class="card-title">Política de Reabastecimiento (ROP/SS)</h5>
+            <div class="row g-3">
+                <div class="col-md-3"><strong>Nivel de servicio:</strong> @(Model.ServiceLevel.ToString("P1"))</div>
+                <div class="col-md-3"><strong>Lead time:</strong> @Model.LeadTimeDays días</div>
+                <div class="col-md-3"><strong>Demanda diaria promedio:</strong> @Model.DailyAvg</div>
+                <div class="col-md-3"><strong>Desvío diario:</strong> @Model.DailyStd</div>
+                <div class="col-md-3"><strong>Stock de seguridad (SS):</strong> @Model.SafetyStock</div>
+                <div class="col-md-3"><strong>Punto de pedido (ROP):</strong> @Model.ROP</div>
+            </div>
+            <small class="text-muted">SS = z·σ_LT, ROP = μ_LT + SS, con μ_LT = promedio_diario × LT, σ_LT = desvío_diario × √LT.</small>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title mb-2">Notas del gráfico</h6>
+            <ul class="mb-0">
+                <li><strong>Series:</strong> @((Model.Filtro.ChartMode=="single")?"línea azul = ventas predichas (kg)":"línea azul = ventas predichas (kg); línea roja discontinua = inventario (kg)").</li>
+                <li><strong>Eje X:</strong> fechas del rango filtrado (si existen); caso contrario, índice de cada registro (1…@Model.TotalFilas).</li>
+                <li><strong>Eje Y:</strong> kilogramos.</li>
+                <li><strong>Filtros aplicados:</strong>
+                    @(Model.Filtro.Desde != null ? $"Desde {Model.Filtro.Desde:yyyy-MM-dd}. " : "")
+                    @(Model.Filtro.Hasta != null ? $"Hasta {Model.Filtro.Hasta:yyyy-MM-dd}. " : "")
+                    @(Model.Filtro.Mes != null ? $"Mes objetivo: {System.Globalization.CultureInfo.GetCultureInfo("es-PE").DateTimeFormat.GetMonthName(Model.Filtro.Mes.Value)}." : "Todos los meses.")
+                </li>
+                <li><strong>Modelo:</strong> modelo_ventas_simple.pkl (features: inventario_promedio, precio_kg).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-body chart-wrap">
+            <h5 class="card-title">Gráficos Interactivos</h5>
+            <div class="row g-4">
+                <div class="col-md-6"><div class="resizable"><canvas id="linePredInv"></canvas></div></div>
+                <div class="col-md-6"><div class="resizable"><canvas id="barPred"></canvas></div></div>
+                <div class="col-md-6"><div class="resizable"><canvas id="pieAlertas"></canvas></div></div>
+                <div class="col-md-6"><div class="resizable"><canvas id="dualPrecioPred"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="scroll-panel mt-3">
+        <table class="table table-bordered text-center mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Inventario Promedio</th>
+                    <th>Precio (S/.)</th>
+                    <th>Ventas Predichas</th>
+                    <th>Abastecer</th>
+                    <th>Alerta</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Resultados)
+            {
+                <tr class="@(item.alerta.Contains("Riesgo") ? "table-danger" : item.alerta.Contains("Sobra") ? "table-warning" : "table-success")">
+                    <td>@item.inventario_promedio</td>
+                    <td>@item.precio_kg</td>
+                    <td>@item.ventas_pred</td>
+                    <td>@item.abastecer_kg</td>
+                    <td><strong>@item.alerta</strong></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Se eliminó el gráfico estático redundante -->
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title mb-2">Notas del gráfico</h6>
+            <ul class="mb-0">
+                <li><strong>Series:</strong> @((Model.Filtro.ChartMode=="single")?"línea azul = ventas predichas (kg)":"línea azul = ventas predichas (kg); línea roja discontinua = inventario (kg)").</li>
+                <li><strong>Eje X:</strong> fechas del rango filtrado (si existen); caso contrario, índice de cada registro (1…@Model.TotalFilas).</li>
+                <li><strong>Eje Y:</strong> kilogramos.</li>
+                <li><strong>Filtros aplicados:</strong>
+                    @(Model.Filtro.Desde != null ? $"Desde {Model.Filtro.Desde:yyyy-MM-dd}. " : "")
+                    @(Model.Filtro.Hasta != null ? $"Hasta {Model.Filtro.Hasta:yyyy-MM-dd}. " : "")
+                    @(Model.Filtro.Mes != null ? $"Mes objetivo: {System.Globalization.CultureInfo.GetCultureInfo("es-PE").DateTimeFormat.GetMonthName(Model.Filtro.Mes.Value)}." : "Todos los meses.")
+                </li>
+                <li><strong>Modelo:</strong> modelo_ventas_simple.pkl (features: inventario_promedio, precio_kg).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title mb-2">Tamaño de gráficos</h6>
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label">Alto (px)</label>
+                    <input id="chartHeight" type="number" class="form-control" min="240" max="900" step="20" value="420" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ancho (%)</label>
+                    <input id="chartWidth" type="number" class="form-control" min="50" max="100" step="5" value="100" />
+                </div>
+                <div class="col-md-6 small-muted">
+                    Ajusta en tiempo real el tamaño de los gráficos interactivos y de la imagen estática.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const labels = @Html.Raw(JsonSerializer.Serialize(Model.Labels ?? new List<string>()));
+    const inv = @Html.Raw(JsonSerializer.Serialize(Model.SerieInventario ?? new List<double>()));
+    const precio = @Html.Raw(JsonSerializer.Serialize(Model.SeriePrecio ?? new List<double>()));
+    const pred = @Html.Raw(JsonSerializer.Serialize(Model.Resultados.Select(r => r.ventas_pred).ToList()));
+    const alertas = @Html.Raw(JsonSerializer.Serialize(Model.Resultados.Select(r => r.alerta).ToList()));
+
+    if (document.getElementById('linePredInv')) {
+        new Chart(document.getElementById('linePredInv'), {
+            type: 'line',
+            data: { labels, datasets: [
+                { label: 'Ventas predichas (kg)', data: pred, borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.2)', tension: 0.25 },
+                { label: 'Inventario (kg)', data: inv, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.15)', borderDash: [5,5], tension: 0.25 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, stacked: false }
+        });
+    }
+    if (document.getElementById('barPred')) {
+        new Chart(document.getElementById('barPred'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Ventas predichas (kg)', data: pred, backgroundColor: '#198754' }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 12 } } } }
+        });
+    }
+    if (document.getElementById('pieAlertas')) {
+        const counts = alertas.reduce((acc, a) => { acc[a] = (acc[a] || 0) + 1; return acc; }, {});
+        new Chart(document.getElementById('pieAlertas'), {
+            type: 'pie',
+            data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: ['#dc3545','#ffc107','#198754','#0dcaf0','#6f42c1'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+    if (document.getElementById('dualPrecioPred')) {
+        new Chart(document.getElementById('dualPrecioPred'), {
+            type: 'line',
+            data: { labels, datasets: [
+                { label: 'Ventas predichas (kg)', data: pred, borderColor: '#0d6efd', yAxisID: 'y1', tension: 0.25 },
+                { label: 'Precio (S/.)', data: precio, borderColor: '#6f42c1', yAxisID: 'y2', tension: 0.25 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, scales: { y1: { type: 'linear', position: 'left', title: { display: true, text: 'Kg' } }, y2: { type: 'linear', position: 'right', title: { display: true, text: 'Precio (S/.)' }, grid: { drawOnChartArea: false } } } }
+        });
+    }
+
+    // Habilita redimensionamiento con CSS (resize: both) en contenedores .resizable
+</script>
+
+
